@@ -1,8 +1,12 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 import asyncio
+import os
 from typing import Dict, List, Any
-from datetime import datetime
+from datetime import datetime, timedelta
+
+# Import utility functions
+from utils import save_historical_data, get_historical_data
 
 # Import our scrapers
 from scrapers import scrape_nike_airforce_prices, scrape_adidas_argentina_jersey_prices, get_dolar_price
@@ -57,6 +61,9 @@ async def get_nike_data() -> Dict[str, Any]:
             "dolar_blue": dolar_price
         }
         
+        # Save historical data
+        save_historical_data('nike', result)
+        
         cache["nike"] = result
         cache["last_update"] = datetime.now()
         
@@ -87,6 +94,9 @@ async def get_adidas_jersey_data() -> Dict[str, Any]:
             "dolar_blue": dolar_price
         }
         
+        # Save historical data
+        save_historical_data('adidas-jersey', result)
+        
         cache["adidas_jersey"] = result
         cache["last_update"] = datetime.now()
         
@@ -114,9 +124,38 @@ async def get_all():
     nike_data = await get_nike_data()
     adidas_jersey_data = await get_adidas_jersey_data()
     
-    return {
+    result = {
         "dolar_blue": get_dolar_price(),
         "productos": [nike_data, adidas_jersey_data]
+    }
+    
+    # Save historical data
+    save_historical_data('all', result)
+    
+    return result
+
+# Endpoints para obtener datos históricos
+@app.get("/history/{endpoint}")
+async def get_history(endpoint: str, limit: int = Query(10, ge=1, le=100)):
+    """
+    Get historical data for an endpoint
+    
+    Args:
+        endpoint: The name of the endpoint (nike, adidas-jersey, all)
+        limit: Maximum number of historical entries to return (default: 10, max: 100)
+    """
+    # Validate endpoint
+    valid_endpoints = ['nike', 'adidas-jersey', 'all']
+    if endpoint not in valid_endpoints:
+        raise HTTPException(status_code=400, detail=f"Invalid endpoint. Must be one of: {valid_endpoints}")
+    
+    # Get historical data
+    history = get_historical_data(endpoint, limit)
+    
+    return {
+        "endpoint": endpoint,
+        "count": len(history),
+        "history": history
     }
 
 # Para desarrollo local

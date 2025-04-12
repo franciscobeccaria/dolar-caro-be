@@ -8,12 +8,14 @@ Backend simple en Python para el proyecto "¿El dólar está caro en Argentina?"
 - Endpoints REST para acceder a los datos
 - Conversión ARS/USD utilizando [DolarApi.com](https://dolarapi.com/)
 - Cache de datos para evitar múltiples scraping
+- Almacenamiento histórico de precios para análisis de tendencias
 
 ## Endpoints disponibles
 
 - `/nike` → Devuelve precios de Nike Air Force One en AR y US
 - `/adidas-jersey` → Devuelve precios de la camiseta aniversario de Argentina de Adidas en AR y US
 - `/all` → Devuelve todos los productos juntos
+- `/history/{endpoint}` → Devuelve datos históricos para un endpoint específico (nike, adidas-jersey, all)
 
 ## Requisitos previos
 
@@ -69,8 +71,41 @@ Ejemplo de respuesta JSON para el endpoint `/nike`:
 }
 ```
 
+Ejemplo de respuesta JSON para el endpoint `/history/nike`:
+
+```json
+{
+  "endpoint": "nike",
+  "count": 2,
+  "history": [
+    {
+      "producto": "Nike Air Force One",
+      "precio_ars": 199999,
+      "precio_usd": 110,
+      "precio_ars_usd": 145.45,
+      "url_ar": "https://www.nike.com.ar/nike-air-force-1--07-cw2288-111/p",
+      "url_us": "https://www.nike.com/t/air-force-1-07-mens-shoes-5QFp5Z/CW2288-111",
+      "dolar_blue": 1375,
+      "timestamp": "2025-04-12T01:45:00.123456"
+    },
+    {
+      "producto": "Nike Air Force One",
+      "precio_ars": 189999,
+      "precio_usd": 110,
+      "precio_ars_usd": 140.74,
+      "url_ar": "https://www.nike.com.ar/nike-air-force-1--07-cw2288-111/p",
+      "url_us": "https://www.nike.com/t/air-force-1-07-mens-shoes-5QFp5Z/CW2288-111",
+      "dolar_blue": 1350,
+      "timestamp": "2025-04-11T10:30:00.123456"
+    }
+  ]
+}
+```
+
 ## Notas
 
 - Los precios se actualizan automáticamente cada hora
 - Si el scraping falla, se utilizan valores predeterminados
 - La API utiliza la cotización del dólar blue de Argentina
+- Los datos históricos se almacenan en archivos JSON en el directorio `data/`
+- Para cada endpoint se guarda una copia del último resultado en `latest.json`
