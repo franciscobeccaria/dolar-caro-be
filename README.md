@@ -4,7 +4,7 @@ Backend simple en Python para el proyecto "¿El dólar está caro en Argentina?"
 
 ## Características
 
-- Scraping de precios actuales desde Nike Argentina/EE.UU. y McDonald's Argentina/EE.UU.
+- Scraping avanzado de precios actuales desde Nike Argentina/EE.UU. con técnicas anti-bloqueo
 - Endpoints REST para acceder a los datos
 - Conversión ARS/USD utilizando [DolarApi.com](https://dolarapi.com/)
 - Cache de datos para evitar múltiples scraping
@@ -12,7 +12,6 @@ Backend simple en Python para el proyecto "¿El dólar está caro en Argentina?"
 ## Endpoints disponibles
 
 - `/nike` → Devuelve precios de Nike Air Force One en AR y US
-- `/bigmac` → Devuelve precios del Big Mac en AR y US
 - `/all` → Devuelve todos los productos juntos
 
 ## Requisitos previos
