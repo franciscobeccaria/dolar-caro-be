@@ -5,7 +5,7 @@ from typing import Dict, List, Any
 from datetime import datetime
 
 # Import our scrapers
-from scrapers import scrape_nike_airforce_prices, get_dolar_price
+from scrapers import scrape_nike_airforce_prices, scrape_adidas_argentina_jersey_prices, get_dolar_price
 
 app = FastAPI(
     title="¿El dólar está caro en Argentina? - API",
@@ -25,6 +25,7 @@ app.add_middleware(
 # Cache para almacenar los datos y evitar múltiples scraping
 cache = {
     "nike": None,
+    "adidas_jersey": None,
     "last_update": None
 }
 
@@ -66,6 +67,34 @@ async def get_nike_data() -> Dict[str, Any]:
 
 # Removed BigMac functionality as requested
 
+# Función para obtener precios de la camiseta de Argentina de Adidas
+async def get_adidas_jersey_data() -> Dict[str, Any]:
+    if cache["adidas_jersey"] and is_cache_valid():
+        return cache["adidas_jersey"]
+    
+    try:
+        # Obtener datos de scraping
+        jersey_data = await scrape_adidas_argentina_jersey_prices()
+        dolar_price = get_dolar_price()
+        
+        result = {
+            "producto": "Adidas Argentina Anniversary Jersey",
+            "precio_ars": jersey_data["ar_price"],
+            "precio_usd": jersey_data["us_price"],
+            "precio_ars_usd": round(jersey_data["ar_price"] / dolar_price, 2),
+            "url_ar": jersey_data["ar_url"],
+            "url_us": jersey_data["us_url"],
+            "dolar_blue": dolar_price
+        }
+        
+        cache["adidas_jersey"] = result
+        cache["last_update"] = datetime.now()
+        
+        return result
+    except Exception as e:
+        print(f"Error obteniendo datos de Adidas Jersey: {e}")
+        raise HTTPException(status_code=500, detail=f"Error obteniendo datos de Adidas Jersey: {str(e)}")
+
 @app.get("/")
 def read_root():
     return {"message": "¿El dólar está caro en Argentina? - API"}
@@ -76,13 +105,18 @@ async def get_nike():
 
 # BigMac endpoint removed as requested
 
+@app.get("/adidas-jersey")
+async def get_adidas_jersey():
+    return await get_adidas_jersey_data()
+
 @app.get("/all")
 async def get_all():
     nike_data = await get_nike_data()
+    adidas_jersey_data = await get_adidas_jersey_data()
     
     return {
         "dolar_blue": get_dolar_price(),
-        "productos": [nike_data]
+        "productos": [nike_data, adidas_jersey_data]
     }
 
 # Para desarrollo local
