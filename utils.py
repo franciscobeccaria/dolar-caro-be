@@ -32,8 +32,31 @@ def save_historical_data(endpoint: str, data: Dict[str, Any]) -> None:
     with open(file_path, 'w', encoding='utf-8') as f:
         json.dump(data_with_timestamp, f, ensure_ascii=False, indent=2)
     
-    # Also update the latest.json file for quick access to the most recent data
+    # Update the latest.json file by merging with existing data if it exists
     latest_path = os.path.join(endpoint_dir, 'latest.json')
+    latest_data = {}
+    
+    # Try to load existing latest data
+    if os.path.exists(latest_path):
+        try:
+            with open(latest_path, 'r', encoding='utf-8') as f:
+                latest_data = json.load(f)
+        except Exception as e:
+            print(f"Error loading latest data: {e}")
+    
+    # Merge the new data with existing data
+    # For Nike and Adidas products, we need to handle specific fields
+    if endpoint in ['nike', 'adidas']:
+        # Keep existing fields that aren't being updated
+        for field in ['us_price', 'ar_price', 'url_us', 'url_ar', 'ar_price_usd']:
+            # If the field exists in latest_data but not in data_with_timestamp, keep it
+            if field in latest_data and field not in data_with_timestamp:
+                data_with_timestamp[field] = latest_data[field]
+            # If the field is None in data_with_timestamp but exists in latest_data, use the value from latest_data
+            elif field in data_with_timestamp and data_with_timestamp[field] is None and field in latest_data:
+                data_with_timestamp[field] = latest_data[field]
+    
+    # Save the merged data to latest.json
     with open(latest_path, 'w', encoding='utf-8') as f:
         json.dump(data_with_timestamp, f, ensure_ascii=False, indent=2)
     

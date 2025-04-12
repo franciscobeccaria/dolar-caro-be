@@ -1,0 +1,16 @@
+{
+  "product": "Nike Air Force 1",
+  "product_id": 1,
+  "country": "Argentina",
+  "country_id": 2,
+  "country_code": "AR",
+  "value": 220000.0,
+  "currency": "ARS",
+  "exchange_rate": 1375,
+  "usd_value": 160.0,
+  "description": "Manual price entry for Nike Air Force 1 in Argentina",
+  "image_url": null,
+  "source_type": "manual",
+  "date": "2025-04-12T19:39:33.118081",
+  "timestamp": "2025-04-12T19:39:33.122547"
+}

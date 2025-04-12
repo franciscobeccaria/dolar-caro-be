@@ -87,7 +87,8 @@ class DatabaseManager:
     
     def add_price(self, product_id: int, country_id: int, source_id: int, value: float, 
                  currency: str, is_fallback: bool = False, exchange_rate: float = None, 
-                 usd_value: float = None) -> Price:
+                 usd_value: float = None, description: str = None, image_url: str = None,
+                 date_obtained: datetime = None) -> Price:
         """Add a new price record"""
         price = Price(
             product_id=product_id,
@@ -98,7 +99,9 @@ class DatabaseManager:
             is_fallback=is_fallback,
             exchange_rate=exchange_rate,
             usd_value=usd_value,
-            date_obtained=datetime.now()
+            description=description,
+            image_url=image_url,
+            date_obtained=date_obtained or datetime.now()
         )
         self.session.add(price)
         self.session.flush()  # Flush to get the ID

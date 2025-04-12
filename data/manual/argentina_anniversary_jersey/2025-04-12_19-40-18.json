@@ -1,0 +1,16 @@
+{
+  "product": "Argentina Anniversary Jersey",
+  "product_id": 2,
+  "country": "Argentina",
+  "country_id": 2,
+  "country_code": "AR",
+  "value": 75000.0,
+  "currency": "ARS",
+  "exchange_rate": 1375,
+  "usd_value": 54.54545454545455,
+  "description": "Manual price for Argentina Jersey in Argentina",
+  "image_url": null,
+  "source_type": "manual",
+  "date": "2025-04-12T19:40:18.802164",
+  "timestamp": "2025-04-12T19:40:18.803575"
+}

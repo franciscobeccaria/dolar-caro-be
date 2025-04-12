@@ -99,6 +99,8 @@ class Price(Base):
     is_fallback = Column(Boolean, default=False)  # Whether this is a fallback price
     exchange_rate = Column(Float)  # Exchange rate to USD at the time of scraping
     usd_value = Column(Float)  # Value in USD based on exchange rate
+    description = Column(String)  # Optional description for manual entries
+    image_url = Column(String)  # URL or base64 string of an image for verification
     
     # Relationships
     product = relationship("Product", back_populates="prices")

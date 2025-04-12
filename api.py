@@ -5,8 +5,9 @@ from datetime import datetime, timedelta
 import asyncio
 import os
 
-# Import our services
+# Import our services and database manager
 from services import PriceService
+from db_manager import DatabaseManager
 
 app = FastAPI(
     title="¿El dólar está caro en Argentina? - API",
@@ -153,6 +154,97 @@ async def get_history(product: str, country: str = "AR", limit: int = Query(10, 
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error obteniendo historial: {str(e)}")
+
+@app.post("/prices/manual")
+async def add_manual_price(
+    product_id: int,
+    country_id: int,
+    price_value: float,
+    currency: str,
+    source_type: str = "manual",
+    description: Optional[str] = None,
+    image: Optional[str] = None,
+    date: Optional[str] = None,
+    service: PriceService = Depends(get_price_service)
+):
+    """
+    Add a manual price entry
+    
+    - **product_id**: ID of the product
+    - **country_id**: ID of the country
+    - **price_value**: The price value
+    - **currency**: Currency code (e.g., USD, ARS)
+    - **source_type**: Type of source (default: manual)
+    - **description**: Optional description of the price entry
+    - **image**: Optional image URL or base64 string
+    - **date**: Optional date in ISO format (default: current date/time)
+    """
+    try:
+        # Parse date if provided
+        parsed_date = None
+        if date:
+            try:
+                parsed_date = datetime.fromisoformat(date)
+            except ValueError:
+                raise HTTPException(status_code=400, detail="Invalid date format. Use ISO format (YYYY-MM-DDTHH:MM:SS)")
+        
+        # Add manual price
+        result = service.add_manual_price(
+            product_id=product_id,
+            country_id=country_id,
+            price_value=price_value,
+            currency=currency,
+            source_type=source_type,
+            description=description,
+            image_url=image,
+            date=parsed_date
+        )
+        
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error adding manual price: {str(e)}")
+
+@app.get("/products")
+async def get_products(service: PriceService = Depends(get_price_service)):
+    """Get all available products"""
+    try:
+        with DatabaseManager() as db:
+            products = db.get_all_products()
+            return {
+                "products": [
+                    {
+                        "id": product.id,
+                        "name": product.name,
+                        "brand": product.brand,
+                        "model": product.model,
+                        "description": product.description,
+                        "category": product.category.name if product.category else None
+                    } for product in products
+                ]
+            }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error getting products: {str(e)}")
+
+@app.get("/countries")
+async def get_countries(service: PriceService = Depends(get_price_service)):
+    """Get all available countries"""
+    try:
+        with DatabaseManager() as db:
+            countries = db.get_all_countries()
+            return {
+                "countries": [
+                    {
+                        "id": country.id,
+                        "name": country.name,
+                        "code": country.code,
+                        "currency": country.currency
+                    } for country in countries
+                ]
+            }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error getting countries: {str(e)}")
 
 # Para desarrollo local
 if __name__ == "__main__":

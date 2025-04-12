@@ -1,0 +1,12 @@
+{
+  "product": "Nike Air Force 1",
+  "us_price": null,
+  "ar_price": 220000.0,
+  "url_us": null,
+  "url_ar": null,
+  "exchange_rate": 1375,
+  "ar_price_usd": 160.0,
+  "description": "Manual price entry for Nike Air Force 1 in Argentina",
+  "timestamp": "2025-04-12T19:39:33.121994",
+  "source": "manual"
+}

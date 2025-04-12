@@ -265,7 +265,166 @@ class PriceService:
                         "date": price.date_obtained.isoformat(),
                         "usd_value": price.usd_value,
                         "exchange_rate": price.exchange_rate,
-                        "is_fallback": price.is_fallback
+                        "is_fallback": price.is_fallback,
+                        "description": price.description,
+                        "image_url": price.image_url
                     } for price in prices
                 ]
             }
+    
+    def add_manual_price(self, product_id: int, country_id: int, price_value: float, currency: str, 
+                        source_type: str = "manual", description: str = None, image_url: str = None, 
+                        date: datetime = None) -> Dict[str, Any]:
+        """Add a manual price entry"""
+        with DatabaseManager(self.db_url) as db:
+            try:
+                # Get product
+                product = db.session.query(Product).filter_by(id=product_id).first()
+                if not product:
+                    raise ValueError(f"Product not found with ID: {product_id}")
+                
+                # Get country
+                country = db.session.query(Country).filter_by(id=country_id).first()
+                if not country:
+                    raise ValueError(f"Country not found with ID: {country_id}")
+                
+                # Get or create source
+                source = db.get_or_create_source(
+                    name="Manual Entry", 
+                    type_str=source_type,
+                    description="Manually entered price data"
+                )
+                
+                # Get exchange rate if needed
+                exchange_rate = None
+                usd_value = None
+                
+                if currency != "USD":
+                    exchange_rate = self.get_exchange_rate_sync()
+                    usd_value = price_value / exchange_rate if exchange_rate else None
+                else:
+                    # If currency is USD, exchange rate to USD is 1:1
+                    exchange_rate = 1.0
+                    usd_value = price_value
+                
+                # Add price
+                price = db.add_price(
+                    product_id=product.id,
+                    country_id=country.id,
+                    source_id=source.id,
+                    value=price_value,
+                    currency=currency,
+                    is_fallback=False,  # Manual entries are never fallbacks
+                    exchange_rate=exchange_rate,
+                    usd_value=usd_value,
+                    description=description,
+                    image_url=image_url,
+                    date_obtained=date
+                )
+                
+                logger.info(f"Manual price added: {price_value} {currency} for {product.name} in {country.name}")
+                
+                # Prepare result data
+                result = {
+                    "product": product.name,
+                    "country": country.name,
+                    "value": price_value,
+                    "currency": currency,
+                    "date": price.date_obtained.isoformat(),
+                    "exchange_rate": exchange_rate,
+                    "usd_value": usd_value,
+                    "description": description,
+                    "image_url": image_url,
+                    "source_type": source_type
+                }
+                
+                # Save to JSON file
+                from utils import save_historical_data
+                
+                # Save to manual folder with product-specific subfolders
+                # Create a standardized format for manual price data
+                json_data = {
+                    "product": product.name,
+                    "product_id": product.id,
+                    "country": country.name,
+                    "country_id": country.id,
+                    "country_code": country.code,
+                    "value": price_value,
+                    "currency": currency,
+                    "exchange_rate": exchange_rate,
+                    "usd_value": usd_value,
+                    "description": description,
+                    "image_url": image_url,
+                    "source_type": source_type,
+                    "date": price.date_obtained.isoformat()
+                }
+                
+                # Use a dedicated manual folder with product subfolder
+                product_slug = product.name.lower().replace(" ", "_")
+                endpoint = f"manual/{product_slug}"
+                
+                # Also save a copy to a product-specific folder for reference
+                if product.name == "Nike Air Force 1":
+                    # Format data to match the expected structure for Nike
+                    nike_data = {
+                        "product": product.name,
+                        "us_price": usd_value if country.code == "US" else None,
+                        "ar_price": price_value if country.code == "AR" else None,
+                        "url_us": image_url if country.code == "US" else None,
+                        "url_ar": image_url if country.code == "AR" else None,
+                        "exchange_rate": exchange_rate,
+                        "ar_price_usd": usd_value if country.code == "AR" else None,
+                        "description": description,
+                        "timestamp": price.date_obtained.isoformat(),
+                        "source": "manual"  # Mark this as a manual entry
+                    }
+                    # Save a reference in the manual folder
+                    save_historical_data("manual/reference/nike", nike_data)
+                elif product.name == "Argentina Anniversary Jersey":
+                    # Format data to match the expected structure for Adidas
+                    adidas_data = {
+                        "product": product.name,
+                        "us_price": usd_value if country.code == "US" else None,
+                        "ar_price": price_value if country.code == "AR" else None,
+                        "url_us": image_url if country.code == "US" else None,
+                        "url_ar": image_url if country.code == "AR" else None,
+                        "exchange_rate": exchange_rate,
+                        "ar_price_usd": usd_value if country.code == "AR" else None,
+                        "description": description,
+                        "timestamp": price.date_obtained.isoformat(),
+                        "source": "manual"  # Mark this as a manual entry
+                    }
+                    # Save a reference in the manual folder
+                    save_historical_data("manual/reference/adidas", adidas_data)
+                
+                # Save to JSON file
+                if endpoint:
+                    save_historical_data(endpoint, json_data)
+                    logger.info(f"Saved manual price data to JSON for endpoint: {endpoint}")
+                
+                return result
+            except Exception as e:
+                logger.error(f"Error adding manual price: {e}")
+                raise
+    
+    def get_exchange_rate_sync(self) -> float:
+        """Synchronous version of get_exchange_rate"""
+        try:
+            import requests
+            response = requests.get("https://dolarapi.com/v1/dolares/blue")
+            data = response.json()
+            rate = data["venta"]
+            
+            # Save to database
+            with DatabaseManager(self.db_url) as db:
+                # Get source
+                source = db.get_or_create_source("DolarApi", "api", "https://dolarapi.com")
+                
+                # Add exchange rate
+                db.add_exchange_rate("ARS", "USD", rate, "DolarApi")
+            
+            return rate
+        except Exception as e:
+            logger.error(f"Error getting exchange rate: {e}")
+            # Return a default value if API fails
+            return 1375.0
